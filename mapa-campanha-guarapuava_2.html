@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17381B">
+<title>Mapa de campanha — Guarapuava</title>
+<style>
+:root{
+  --verde:#17381B; --verde2:#2E5C31; --lima:#BDD630;
+  --papel:#EDEFE6; --papel2:#E2E6D7; --tinta:#111A0F; --cinza:#5F6858;
+  --vermelho:#A8321F; --ambar:#D99A2B; --linha:#C9CFBB;
+  --sheet: 0 -10px 30px rgba(17,26,15,.18);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--papel); color:var(--tinta);
+  font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  font-size:15px; line-height:1.4; font-variant-numeric:tabular-nums;
+  overscroll-behavior:none;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+/* ---------- topo ---------- */
+header{
+  position:sticky;top:0;z-index:40;background:var(--verde);color:var(--papel);
+  padding:10px 12px 8px; padding-top:calc(10px + env(safe-area-inset-top));
+}
+header h1{margin:0;font-size:16px;font-weight:800;letter-spacing:-.2px}
+header p{margin:1px 0 8px;font-size:11px;color:#BDD630;font-weight:600}
+.metricas{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.metricas::-webkit-scrollbar{display:none}
+.metricas button{
+  white-space:nowrap;font-size:12px;font-weight:600;padding:6px 11px;border-radius:20px;
+  background:rgba(237,239,230,.13);color:#D5DCC8
+}
+.metricas button[aria-pressed="true"]{background:var(--lima);color:var(--verde)}
+
+/* ---------- mapa ---------- */
+#mapaWrap{position:relative;padding:8px 6px 0;touch-action:manipulation}
+svg{width:100%;height:auto;display:block}
+.bairro{stroke:var(--papel);stroke-width:2.5;cursor:pointer;transition:opacity .12s}
+.bairro.dim{opacity:.2}
+.bairro.sel{stroke:var(--verde);stroke-width:6}
+.rot{font-size:13px;font-weight:700;fill:#fff;pointer-events:none;paint-order:stroke;
+     stroke:rgba(17,26,15,.45);stroke-width:3px;text-anchor:middle}
+.rot.escura{fill:#16210F;stroke:rgba(255,255,255,.6)}
+.marcaN{font-size:11px;font-weight:700;fill:#fff;opacity:.85;pointer-events:none;text-anchor:middle;
+        paint-order:stroke;stroke:rgba(17,26,15,.45);stroke-width:2.5px}
+.rota{fill:none;stroke:var(--verde);stroke-width:4;stroke-dasharray:9 7;opacity:.9}
+.rotaNum{font-size:13px;font-weight:800;fill:var(--verde);text-anchor:middle;pointer-events:none;
+         paint-order:stroke;stroke:#fff;stroke-width:4px}
+
+/* ---------- legenda ---------- */
+.legenda{display:flex;align-items:center;gap:8px;padding:6px 14px 10px;font-size:11px;color:var(--cinza)}
+.rampa{flex:1;height:9px;border-radius:5px}
+.legenda b{font-weight:700;color:var(--tinta)}
+
+/* ---------- abas ---------- */
+.abas{display:flex;gap:4px;padding:0 10px 8px;border-bottom:1px solid var(--linha)}
+.abas button{
+  flex:1;font-size:12.5px;font-weight:700;padding:8px 4px;border-radius:9px 9px 0 0;color:var(--cinza)
+}
+.abas button[aria-pressed="true"]{background:var(--papel2);color:var(--verde)}
+.abas .pino{display:inline-block;min-width:17px;padding:0 4px;margin-left:4px;border-radius:9px;
+  background:var(--verde);color:var(--lima);font-size:10.5px;line-height:17px}
+
+main{padding:12px 12px 90px}
+.vazio{color:var(--cinza);font-size:13.5px;padding:14px 2px}
+
+/* ---------- cartão de bairro ---------- */
+.cartao{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(17,26,15,.1)}
+.cartao h2{margin:0;font-size:18px;letter-spacing:-.3px}
+.cartao .meta{margin:2px 0 11px;font-size:12px;color:var(--cinza)}
+.tag{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:800;margin-left:6px}
+.tagA{background:#E7EFC4;color:#2E5C31}.tagB{background:var(--papel2);color:#4A5340}
+.tagC{background:#F3E1DD;color:var(--vermelho)}
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.cel{background:var(--papel);border-radius:9px;padding:8px 9px}
+.cel span{display:block;font-size:10.5px;color:var(--cinza);line-height:1.25}
+.cel b{display:block;font-size:19px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
+.b-pos{color:var(--verde2)}.b-neg{color:var(--vermelho)}
+.acao{margin:11px 0 0;font-size:13.5px}
+.acao strong{color:var(--verde)}
+.alerta{margin-top:9px;font-size:12px;color:var(--vermelho);background:#F7E7E3;padding:7px 9px;border-radius:8px}
+.botoes{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;text-align:center;padding:10px;border-radius:9px;font-size:13.5px;font-weight:700;
+     background:var(--verde);color:var(--papel)}
+.btn.sec{background:var(--papel2);color:var(--verde)}
+
+/* ---------- listas ---------- */
+.modos{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.modos::-webkit-scrollbar{display:none}
+.modos button{white-space:nowrap;font-size:12px;font-weight:700;padding:6px 10px;border-radius:18px;
+  background:var(--papel2);color:var(--cinza)}
+.modos button[aria-pressed="true"]{background:var(--verde);color:var(--lima)}
+.linha{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--linha)}
+.pos{width:22px;font-size:12px;font-weight:800;color:var(--cinza)}
+.linha .nm{flex:1;font-size:14px;font-weight:600;line-height:1.2}
+.linha .nm i{display:block;font-style:normal;font-size:11px;color:var(--cinza);font-weight:400;margin-top:1px}
+.linha .vl{font-size:15px;font-weight:800;min-width:56px;text-align:right}
+.linha .add{width:30px;height:30px;border-radius:15px;background:var(--papel2);color:var(--verde);
+  font-size:19px;font-weight:700;line-height:28px;text-align:center;flex:none}
+.linha .add.on{background:var(--verde);color:var(--lima)}
+
+/* ---------- planejador ---------- */
+.somas{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:12px}
+.somas .cel b{font-size:21px}
+.slider{background:#fff;border-radius:12px;padding:13px 14px;margin-bottom:12px}
+.slider label{font-size:12.5px;color:var(--cinza);display:block;margin-bottom:7px}
+.slider input{width:100%;accent-color:var(--verde2)}
+.slider .res{margin-top:9px;font-size:14px}
+.slider .res b{font-size:22px;font-weight:800;color:var(--verde2);letter-spacing:-.5px}
+.aviso{font-size:12px;color:var(--cinza);margin-top:12px;line-height:1.45}
+
+/* ---------- rodapé fixo ---------- */
+.selo{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--vermelho);color:#fff;
+  font-size:10.5px;line-height:1.3;padding:7px 12px;padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+.selo b{font-weight:700}
+
+@media(min-width:760px){
+  body{font-size:15px}
+  .envelope{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1.15fr .85fr;gap:0;align-items:start}
+  .colE{position:sticky;top:96px}
+  main{padding:12px 16px 70px}
+  .grade{grid-template-columns:repeat(3,1fr)}
+  .somas{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Mapa de campanha — Guarapuava</h1>
+  <p>Pesquisa Arbeit · 800 entrevistas · 06 a 08/09/2026 · uso interno</p>
+  <div class="metricas" id="metricas"></div>
+</header>
+
+<div class="envelope">
+<div class="colE">
+  <div id="mapaWrap"></div>
+  <div class="legenda">
+    <span id="legMin">—</span>
+    <div class="rampa" id="rampa"></div>
+    <span id="legMax">—</span>
+    <b id="legNome"></b>
+  </div>
+</div>
+
+<div class="colD">
+  <div class="abas">
+    <button id="abaBairro" aria-pressed="true">Bairro</button>
+    <button id="abaLista" aria-pressed="false">Onde ir primeiro</button>
+    <button id="abaPlano" aria-pressed="false">Plano<span class="pino" id="pino">0</span></button>
+  </div>
+  <main id="conteudo"></main>
+</div>
+</div>
+
+<div class="selo"><b>Documento interno.</b> Pesquisa não registrada na Justiça Eleitoral — divulgação proibida (Lei 9.504/1997, Res. TSE 23.747/2026).</div>
+
+<script>
+/* ============ dados ============ */
+const SETOR = {
+  "01":{nome:"Centro e entorno", firmeza:12, semDono:24.10, ratinho:37.5, sandro:8.93, art:7.14},
+  "02":{nome:"Industrial e Primavera", firmeza:20, semDono:21.87, ratinho:17.19, sandro:17.19, art:7.81},
+  "03":{nome:"Bom Sucesso, Conradinho, Vila Carli", firmeza:44, semDono:22.99, ratinho:31.03, sandro:5.75, art:10.34},
+  "04":{nome:"Morro Alto e São Cristóvão", firmeza:25, semDono:17.04, ratinho:25.00, sandro:9.09, art:18.18},
+  "05":{nome:"Américas, Vassoural, Olarias", firmeza:27, semDono:17.78, ratinho:22.22, sandro:8.89, art:12.22},
+  "06":{nome:"Boqueirão, Jordão, Santa Cruz", firmeza:7, semDono:22.48, ratinho:37.08, sandro:7.87, art:15.73},
+  "07":{nome:"Distritos e zona rural", firmeza:47, semDono:20.00, ratinho:22.86, sandro:8.57, art:24.29}
+};
+
+// poly: polígono esquemático. Vários polígonos podem apontar para a mesma unidade da pesquisa.
+const B = [
+ {id:"rural", nome:"Zona rural e distritos", setor:"07", n:93, int:24.29, rej:5.71, cesar:38.57, antenor:5.71, tier:"A", arr:3,
+  acao:"Volume alto — é onde rende mais por hora de agenda.",
+  poly:[[40,812],[960,806],[958,886],[42,892]], rotulo:[500,848], curto:"DISTRITOS E ZONA RURAL"},
+ {id:"imovel", nome:"Imóvel Morro Alto / Araucárias", setor:"04", n:31, int:26.09, rej:8.70, cesar:30.43, antenor:17.39, tier:"A", arr:1,
+  acao:"Melhor saldo urbano da cidade. Consolidar.",
+  poly:[[545,20],[725,35],[720,140],[560,130]], rotulo:[637,88], curto:"ARAUCÁRIAS",
+  extra:[{poly:[[725,35],[985,50],[975,165],[720,150]], rotulo:[850,110], curto:"IMÓVEL M. ALTO"}]},
+ {id:"santacruz", nome:"Santa Cruz", setor:"06", n:32, int:16.67, rej:4.17, cesar:16.67, antenor:20.83, tier:"A", arr:1,
+  acao:"Rejeição de 4,2% — quase sem resistência. Consolidar.",
+  poly:[[638,592],[792,586],[786,672],[634,666]], rotulo:[712,632], curto:"SANTA CRUZ"},
+ {id:"vilacarli", nome:"Vila Carli", setor:"03", n:47, int:8.57, rej:2.86, cesar:31.43, antenor:37.14, tier:"B", arr:2,
+  acao:"Menor rejeição da cidade com intenção baixa: espaço aberto.",
+  poly:[[190,240],[430,235],[425,365],[200,370]], rotulo:[311,305], curto:"VILA CARLI"},
+ {id:"morroalto", nome:"Morro Alto", setor:"04", n:51, int:15.79, rej:10.53, cesar:34.21, antenor:31.58, tier:"A", arr:2,
+  acao:"Terreno favorável e eleitorado grande. Volume alto.",
+  poly:[[810,165],[975,170],[970,310],[805,300]], rotulo:[890,240], curto:"MORRO ALTO"},
+ {id:"trianon", nome:"Trianon", setor:"01", n:17, int:7.69, rej:7.69, cesar:46.15, antenor:23.08, tier:"B", arr:1,
+  acao:"Base pequena — tratar como sondagem.",
+  poly:[[650,485],[820,490],[815,575],[648,568]], rotulo:[733,530], curto:"TRIANON"},
+ {id:"santana", nome:"Santana", setor:"01", n:37, int:10.71, rej:10.71, cesar:25.00, antenor:28.57, tier:"B", arr:1,
+  acao:"Único bairro do Centro sem rejeição acima da intenção.",
+  poly:[[733,410],[900,416],[895,502],[730,496]], rotulo:[814,455], curto:"SANTANA"},
+ {id:"bonsucesso", nome:"Bonsucesso", setor:"03", n:31, int:17.39, rej:17.39, cesar:30.43, antenor:26.09, tier:"B", arr:1,
+  acao:"Disputado com Cesar e Antenor em pé de igualdade.",
+  poly:[[425,265],[630,268],[640,355],[428,362]], rotulo:[531,312], curto:"BONSUCESSO"},
+ {id:"cascavel", nome:"Cascavel", setor:"05", n:12, int:11.11, rej:11.11, cesar:22.22, antenor:33.33, tier:"B", arr:1,
+  acao:"Base de 12 entrevistas — sondagem, não medida.",
+  poly:[[300,370],[425,365],[430,448],[305,452]], rotulo:[365,410], curto:"CASCAVEL"},
+ {id:"vilabela", nome:"Vila Bela", setor:"05", n:65, int:16.33, rej:16.33, cesar:36.73, antenor:22.45, tier:"A", arr:2,
+  acao:"Maior bairro urbano com desempenho acima da média.",
+  poly:[[345,470],[505,478],[500,585],[348,580]], rotulo:[425,530], curto:"VILA BELA"},
+ {id:"olarias", nome:"Alto Cascavel / Olarias", setor:"05", n:27, int:10.00, rej:10.00, cesar:30.00, antenor:35.00, tier:"B", arr:1,
+  acao:"Antenor lidera ali — disputa direta.",
+  poly:[[140,455],[340,452],[345,565],[148,562]], rotulo:[243,508], curto:"ALTO CASCAVEL",
+  extra:[{poly:[[160,565],[400,560],[395,665],[165,660]], rotulo:[280,613], curto:"OLARIAS"}]},
+ {id:"boqueirao", nome:"Boqueirão / Jordão", setor:"06", n:87, int:15.38, rej:16.92, cesar:30.77, antenor:24.62, tier:"A", arr:3,
+  acao:"Repetir nome e número toda semana, mesma liderança.",
+  poly:[[400,585],[620,578],[624,702],[404,698]], rotulo:[512,640], curto:"BOQUEIRÃO",
+  extra:[{poly:[[628,692],[812,686],[806,788],[622,782]], rotulo:[716,741], curto:"JORDÃO"}]},
+ {id:"primavera", nome:"Primavera", setor:"02", n:29, int:9.09, rej:13.64, cesar:27.27, antenor:27.27, tier:"B", arr:1,
+  acao:"Melhor porta de entrada do setor 02.",
+  poly:[[425,100],[560,105],[565,195],[430,200]], rotulo:[495,150], curto:"PRIMAVERA"},
+ {id:"saocristovao", nome:"São Cristóvão", setor:"04", n:36, int:14.81, rej:22.22, cesar:40.74, antenor:25.93, tier:"C", arr:0,
+  acao:"Intenção boa com 22,2% de rejeição: liderança local, sem som.",
+  poly:[[628,145],[805,160],[810,260],[630,268]], rotulo:[718,207], curto:"S. CRISTÓVÃO"},
+ {id:"americas", nome:"Jardim das Américas / Vassoural", setor:"05", n:16, int:0.00, rej:8.33, cesar:50.00, antenor:8.33, tier:"C", arr:0,
+  acao:"Base de 16 entrevistas — confirmar antes de decidir.",
+  poly:[[120,368],[300,370],[305,455],[125,452]], rotulo:[212,412], curto:"JD. AMÉRICAS",
+  extra:[{poly:[[20,420],[120,412],[125,470],[25,478]], rotulo:[72,447], curto:"VASSOURAL"}]},
+ {id:"centro", nome:"Centro", setor:"01", n:29, int:4.55, rej:13.64, cesar:45.45, antenor:18.18, tier:"C", arr:0,
+  acao:"Cesar em 45,5% — presença mínima.",
+  poly:[[570,400],[728,398],[733,490],[572,488]], rotulo:[651,444], curto:"CENTRO"},
+ {id:"industrial", nome:"Industrial / Aldeia / Cidade dos Lagos", setor:"02", n:56, int:7.14, rej:16.67, cesar:26.19, antenor:23.81, tier:"C", arr:0,
+  acao:"Base confiável e saldo ruim: visita dirigida, sem som.",
+  poly:[[175,105],[425,100],[430,235],[190,240]], rotulo:[305,170], curto:"INDUSTRIAL",
+  extra:[{poly:[[340,30],[545,20],[560,105],[350,110]], rotulo:[450,66], curto:"ALDEIA"}]},
+ {id:"altoxv", nome:"Alto da XV", setor:"01", n:25, int:0.00, rej:10.53, cesar:36.84, antenor:26.32, tier:"C", arr:0,
+  acao:"Zero citação na amostra — presença mínima.",
+  poly:[[640,300],[808,298],[812,396],[645,390]], rotulo:[726,346], curto:"ALTO DA XV"},
+ {id:"estados", nome:"Bairro dos Estados", setor:"01", n:17, int:15.38, rej:30.77, cesar:46.15, antenor:23.08, tier:"C", arr:0,
+  acao:"Maior rejeição da cidade, em base de 17 — confirmar.",
+  poly:[[430,362],[565,358],[570,450],[432,452]], rotulo:[499,406], curto:"DOS ESTADOS"},
+ {id:"conradinho", nome:"Conradinho", setor:"03", n:39, int:6.90, rej:24.14, cesar:31.03, antenor:20.69, tier:"C", arr:0,
+  acao:"Uma das maiores rejeições da cidade.",
+  poly:[[430,200],[625,190],[630,270],[425,265]], rotulo:[528,232], curto:"CONRADINHO"},
+ {id:"batel", nome:"Batel", setor:"01", n:23, int:5.88, rej:23.53, cesar:17.65, antenor:47.06, tier:"C", arr:0,
+  acao:"Território de Antenor (47,1%) — não vale o custo.",
+  poly:[[480,452],[645,448],[650,540],[485,542]], rotulo:[565,496], curto:"BATEL"}
+];
+
+B.forEach(b=>{
+  const s=SETOR[b.setor];
+  b.peso   = b.n/800*100;
+  b.saldo  = b.int-b.rej;
+  b.atual  = b.peso*b.int/100;
+  b.livre  = b.peso*s.semDono/100;
+  b.risco  = b.atual*(1-s.firmeza/100);
+  b.firmeza=s.firmeza; b.semDono=s.semDono; b.ratinho=s.ratinho; b.sandro=s.sandro;
+});
+
+/* ============ métricas ============ */
+const METRICAS = {
+  int:{rot:"Intenção Artagão", campo:"int", min:0, max:26, bom:"alto", suf:"%"},
+  rej:{rot:"Rejeição", campo:"rej", min:0, max:31, bom:"baixo", suf:"%"},
+  saldo:{rot:"Saldo", campo:"saldo", min:-18, max:19, bom:"alto", suf:""},
+  livre:{rot:"Voto sem dono", campo:"semDono", min:16, max:25, bom:"alto", suf:"%", setorial:true},
+  firmeza:{rot:"Firmeza do voto", campo:"firmeza", min:5, max:50, bom:"alto", suf:"%", setorial:true},
+  cesar:{rot:"Cesar Silvestri", campo:"cesar", min:15, max:50, bom:"baixo", suf:"%"},
+  antenor:{rot:"Dr. Antenor", campo:"antenor", min:5, max:48, bom:"baixo", suf:"%"},
+  sandro:{rot:"Sandro Alex", campo:"sandro", min:5, max:18, bom:"alto", suf:"%", setorial:true}
+};
+let metrica="saldo", selecionado=null, aba="bairro", modo="saldo";
+const plano=new Set();
+
+/* ============ cores ============ */
+function mix(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t))}
+function rampa(t){ // 0 ruim → 1 bom
+  const r=[168,50,31], a=[217,154,43], g=[46,92,49];
+  const c = t<.5 ? mix(r,a,t*2) : mix(a,g,(t-.5)*2);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function corDe(b){
+  const m=METRICAS[metrica];
+  let t=(b[m.campo]-m.min)/(m.max-m.min);
+  t=Math.max(0,Math.min(1,t));
+  if(m.bom==="baixo") t=1-t;
+  return rampa(t);
+}
+function claro(cor){ // decide cor do rótulo
+  const n=cor.match(/\d+/g).map(Number);
+  return (n[0]*299+n[1]*587+n[2]*114)/1000 > 150;
+}
+
+/* ============ mapa ============ */
+function desenhaMapa(){
+  let p="";
+  B.forEach(b=>{
+    const cor=corDe(b), pecas=[{poly:b.poly,rotulo:b.rotulo,curto:b.curto}].concat(b.extra||[]);
+    pecas.forEach((pc,i)=>{
+      const dim = plano.size && !plano.has(b.id) ? " dim" : "";
+      const sel = selecionado===b.id ? " sel" : "";
+      p+=`<polygon class="bairro${dim}${sel}" data-id="${b.id}" fill="${cor}" points="${pc.poly.map(q=>q.join(',')).join(' ')}"/>`;
+      p+=`<text class="rot${claro(cor)?' escura':''}" x="${pc.rotulo[0]}" y="${pc.rotulo[1]}">${pc.curto}</text>`;
+      if(i===0){
+        const v=b[METRICAS[metrica].campo];
+        p+=`<text class="marcaN${claro(cor)?' escura':''}" x="${pc.rotulo[0]}" y="${pc.rotulo[1]+17}">${fmt(v)}${METRICAS[metrica].suf}</text>`;
+      }
+    });
+  });
+  // rota sugerida
+  if(plano.size>1){
+    const ordem=rota();
+    const pts=ordem.map(b=>b.rotulo);
+    p+=`<polyline class="rota" points="${pts.map(q=>q.join(',')).join(' ')}"/>`;
+    ordem.forEach((b,i)=>{ p+=`<text class="rotaNum" x="${b.rotulo[0]}" y="${b.rotulo[1]-16}">${i+1}</text>`; });
+  }
+  document.getElementById("mapaWrap").innerHTML =
+    `<svg viewBox="0 0 1000 900" xmlns="http://www.w3.org/2000/svg">${p}</svg>`;
+  document.querySelectorAll(".bairro").forEach(el=>{
+    el.addEventListener("click",()=>{ selecionado=el.dataset.id; aba="bairro"; render(); });
+  });
+  const m=METRICAS[metrica];
+  document.getElementById("rampa").style.background =
+    `linear-gradient(90deg, ${rampa(0)}, ${rampa(.5)}, ${rampa(1)})`;
+  document.getElementById("legMin").textContent = m.bom==="alto" ? "pior" : "melhor";
+  document.getElementById("legMax").textContent = m.bom==="alto" ? "melhor" : "pior";
+  document.getElementById("legNome").textContent = m.rot + (m.setorial?" (por setor)":"");
+}
+function fmt(v){ return (Math.round(v*10)/10).toString().replace(".",",") }
+function fmt2(v){ return (Math.round(v*100)/100).toFixed(2).replace(".",",") }
+
+/* rota: vizinho mais próximo a partir do bairro de maior peso */
+function rota(){
+  const itens=B.filter(b=>plano.has(b.id));
+  if(itens.length<2) return itens;
+  let restantes=itens.slice(), atual=restantes.reduce((a,b)=>b.peso>a.peso?b:a);
+  const ordem=[atual]; restantes=restantes.filter(b=>b!==atual);
+  while(restantes.length){
+    let melhor=restantes[0], d0=Infinity;
+    restantes.forEach(b=>{
+      const d=Math.hypot(b.rotulo[0]-atual.rotulo[0], b.rotulo[1]-atual.rotulo[1]);
+      if(d<d0){d0=d;melhor=b}
+    });
+    ordem.push(melhor); atual=melhor; restantes=restantes.filter(b=>b!==melhor);
+  }
+  return ordem;
+}
+
+/* ============ painéis ============ */
+function cartaoBairro(){
+  if(!selecionado) return `<p class="vazio">Toque em um bairro do mapa para ver os números, a ação recomendada e adicionar ao plano.</p>`;
+  const b=B.find(x=>x.id===selecionado), s=SETOR[b.setor];
+  const noPlano=plano.has(b.id);
+  const baixa = b.n<30;
+  return `<div class="cartao">
+    <h2>${b.nome}<span class="tag tag${b.tier}">Grupo ${b.tier}</span></h2>
+    <p class="meta">Setor ${b.setor} — ${s.nome} · base de ${b.n} entrevistas · ${fmt(b.peso)}% do eleitorado</p>
+    <div class="grade">
+      <div class="cel"><span>Intenção</span><b>${fmt(b.int)}%</b></div>
+      <div class="cel"><span>Rejeição</span><b>${fmt(b.rej)}%</b></div>
+      <div class="cel"><span>Saldo</span><b class="${b.saldo>0?'b-pos':(b.saldo<0?'b-neg':'')}">${b.saldo>0?'+':''}${fmt(b.saldo)}</b></div>
+      <div class="cel"><span>Cesar Silvestri</span><b>${fmt(b.cesar)}%</b></div>
+      <div class="cel"><span>Dr. Antenor</span><b>${fmt(b.antenor)}%</b></div>
+      <div class="cel"><span>Sem dono (setor)</span><b>${fmt(b.semDono)}%</b></div>
+      <div class="cel"><span>Entrega hoje</span><b>${fmt2(b.atual)}</b></div>
+      <div class="cel"><span>Voto livre</span><b>${fmt2(b.livre)}</b></div>
+      <div class="cel"><span>Voto em risco</span><b class="${b.risco>1?'b-neg':''}">${fmt2(b.risco)}</b></div>
+    </div>
+    <p class="acao"><strong>Ação:</strong> ${b.acao} ${b.arr?`Previstos <strong>${b.arr} arrastões</strong> a cada 20 saídas.`:`<strong>Sem arrastão com som</strong> — visita dirigida.`}</p>
+    ${baixa?`<p class="alerta">Base de ${b.n} entrevistas. Margem enorme neste recorte — use como indício, não como medida.</p>`:``}
+    <div class="botoes">
+      <button class="btn ${noPlano?'sec':''}" onclick="alternar('${b.id}')">${noPlano?'Remover do plano':'Adicionar ao plano'}</button>
+      <button class="btn sec" onclick="irLista()">Ver ranking</button>
+    </div>
+  </div>
+  <p class="aviso">“Entrega hoje”, “voto livre” e “voto em risco” são pontos percentuais da votação total da cidade: quanto o bairro já dá, quanto ainda está sem dono e quanto do que ele dá não virou lembrança espontânea.</p>`;
+}
+
+const MODOS={
+  saldo:{rot:"Saldo", campo:"saldo", desc:"intenção menos rejeição", suf:""},
+  livre:{rot:"Voto livre", campo:"livre", desc:"eleitorado sem dono, ponderado pelo tamanho do bairro", suf:""},
+  risco:{rot:"Voto em risco", campo:"risco", desc:"voto que ainda não virou lembrança espontânea", suf:""},
+  atual:{rot:"Entrega hoje", campo:"atual", desc:"quanto da votação atual sai dali", suf:""},
+  rej:{rot:"Menor rejeição", campo:"rej", desc:"onde há menos resistência formada", suf:"%", inv:true}
+};
+function lista(){
+  const m=MODOS[modo];
+  const ord=B.slice().sort((a,b)=> m.inv ? a[m.campo]-b[m.campo] : b[m.campo]-a[m.campo]);
+  let h=`<div class="modos">`+Object.keys(MODOS).map(k=>
+    `<button aria-pressed="${k===modo}" onclick="setModo('${k}')">${MODOS[k].rot}</button>`).join("")+`</div>`;
+  h+=`<p class="aviso" style="margin:0 0 10px">Ordenado por <b>${m.rot.toLowerCase()}</b> — ${m.desc}.</p>`;
+  ord.forEach((b,i)=>{
+    h+=`<div class="linha">
+      <span class="pos">${i+1}</span>
+      <span class="nm" onclick="abrir('${b.id}')">${b.nome}<i>Setor ${b.setor} · n=${b.n} · grupo ${b.tier}</i></span>
+      <span class="vl">${m.inv||m.campo==='rej'?fmt(b[m.campo]):(m.campo==='saldo'?(b.saldo>0?'+':'')+fmt(b.saldo):fmt2(b[m.campo]))}${m.suf}</span>
+      <button class="add ${plano.has(b.id)?'on':''}" onclick="alternar('${b.id}')">${plano.has(b.id)?'✓':'+'}</button>
+    </div>`;
+  });
+  return h;
+}
+
+function planoPainel(){
+  if(!plano.size) return `<p class="vazio">Nenhum bairro no plano. Adicione bairros pelo mapa ou pelo ranking para somar o eleitorado, estimar ganho e ver uma ordem de rota.</p>`;
+  const itens=rota();
+  const soma=(c)=>itens.reduce((t,b)=>t+b[c],0);
+  const peso=soma("peso"), atual=soma("atual"), livre=soma("livre"), risco=soma("risco");
+  const arr=itens.reduce((t,b)=>t+b.arr,0);
+  let h=`<div class="somas">
+    <div class="cel"><span>Eleitorado coberto</span><b>${fmt(peso)}%</b></div>
+    <div class="cel"><span>Entrega hoje</span><b>${fmt2(atual)}</b></div>
+    <div class="cel"><span>Voto livre</span><b>${fmt2(livre)}</b></div>
+    <div class="cel"><span>Voto em risco</span><b>${fmt2(risco)}</b></div>
+  </div>
+  <div class="slider">
+    <label>Se a campanha converter <b id="pc">20</b>% do voto sem dono desses bairros:</label>
+    <input type="range" min="0" max="60" value="20" id="conv" oninput="calc()">
+    <p class="res">Ganho estimado <b id="ganho"></b> pontos · total iria de <b id="de"></b> para <b id="para"></b></p>
+  </div>
+  <p class="aviso" style="margin:0 0 10px">Ordem de rota sugerida por proximidade no mapa esquemático — serve para agrupar, não para navegar. ${arr?`Somam <b>${arr} arrastões</b> a cada 20 saídas.`:``}</p>`;
+  itens.forEach((b,i)=>{
+    h+=`<div class="linha">
+      <span class="pos">${i+1}</span>
+      <span class="nm" onclick="abrir('${b.id}')">${b.nome}<i>Setor ${b.setor} · ${fmt(b.peso)}% do eleitorado · ${b.arr?b.arr+' arrastões':'sem arrastão'}</i></span>
+      <span class="vl">${b.saldo>0?'+':''}${fmt(b.saldo)}</span>
+      <button class="add on" onclick="alternar('${b.id}')">✓</button>
+    </div>`;
+  });
+  h+=`<div class="botoes" style="margin-top:14px">
+        <button class="btn sec" onclick="copiar()">Copiar plano</button>
+        <button class="btn sec" onclick="limpar()">Limpar</button>
+      </div>`;
+  return h;
+}
+function calc(){
+  const itens=B.filter(b=>plano.has(b.id));
+  const livre=itens.reduce((t,b)=>t+b.livre,0);
+  const pc=+document.getElementById("conv").value;
+  const g=livre*pc/100;
+  document.getElementById("pc").textContent=pc;
+  document.getElementById("ganho").textContent="+"+fmt2(g);
+  document.getElementById("de").textContent="13,33%";
+  document.getElementById("para").textContent=fmt2(13.33+g)+"%";
+}
+function copiar(){
+  const itens=rota();
+  const txt="PLANO DE CAMPANHA — bairros selecionados\n"+
+    itens.map((b,i)=>`${i+1}. ${b.nome} (setor ${b.setor}) — intenção ${fmt(b.int)}%, rejeição ${fmt(b.rej)}%, saldo ${b.saldo>0?'+':''}${fmt(b.saldo)}, ${b.arr?b.arr+' arrastões':'sem arrastão'}`).join("\n")+
+    `\n\nEleitorado coberto: ${fmt(itens.reduce((t,b)=>t+b.peso,0))}%`+
+    `\nVoto livre somado: ${fmt2(itens.reduce((t,b)=>t+b.livre,0))} pontos`;
+  navigator.clipboard?.writeText(txt).then(()=>alert("Plano copiado."),()=>alert("Não consegui copiar."));
+}
+function limpar(){ plano.clear(); render(); }
+function alternar(id){ plano.has(id)?plano.delete(id):plano.add(id); render(); }
+function abrir(id){ selecionado=id; aba="bairro"; render(); window.scrollTo({top:0,behavior:"smooth"}); }
+function irLista(){ aba="lista"; render(); }
+function setModo(k){ modo=k; render(); }
+
+/* ============ render ============ */
+function render(){
+  const mc=document.getElementById("metricas");
+  if(!mc.dataset.pronto){
+    mc.innerHTML=Object.keys(METRICAS).map(k=>`<button data-m="${k}">${METRICAS[k].rot}</button>`).join("");
+    mc.dataset.pronto="1";
+    mc.querySelectorAll("button").forEach(bt=>bt.addEventListener("click",()=>{metrica=bt.dataset.m;render()}));
+  }
+  mc.querySelectorAll("button").forEach(bt=>bt.setAttribute("aria-pressed", bt.dataset.m===metrica));
+  document.getElementById("abaBairro").setAttribute("aria-pressed", aba==="bairro");
+  document.getElementById("abaLista").setAttribute("aria-pressed", aba==="lista");
+  document.getElementById("abaPlano").setAttribute("aria-pressed", aba==="plano");
+  document.getElementById("pino").textContent=plano.size;
+  desenhaMapa();
+  document.getElementById("conteudo").innerHTML =
+    aba==="bairro" ? cartaoBairro() : aba==="lista" ? lista() : planoPainel();
+  if(aba==="plano" && plano.size) calc();
+}
+document.getElementById("abaBairro").onclick=()=>{aba="bairro";render()};
+document.getElementById("abaLista").onclick=()=>{aba="lista";render()};
+document.getElementById("abaPlano").onclick=()=>{aba="plano";render()};
+render();
+</script>
+</body>
+</html>
